@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+
+# Environnement virtuel
+venv/
+.venv/
+
+# Variables secrètes
+.env
+
+# Django
+*.log
+db.sqlite3
+media/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
