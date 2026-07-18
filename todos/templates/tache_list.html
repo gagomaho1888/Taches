@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% block content %}
+<div class="list-container">
+    <div class="list-header">
+        <h2>Mes tâches</h2>
+        <a href="{% url 'tache_create' %}" class="btn btn-primary">+ Nouvelle tâche</a>
+    </div>
+
+    <form method="get" class="filter-bar">
+        <input type="text" name="q" value="{{ recherche_actuelle }}" placeholder="Rechercher..." class="form-input filter-search">
+
+        <select name="statut" class="form-input filter-select">
+            <option value="">Tous les statuts</option>
+            <option value="todo" {% if statut_actuel == "todo" %}selected{% endif %}>À faire</option>
+            <option value="done" {% if statut_actuel == "done" %}selected{% endif %}>Terminé</option>
+        </select>
+
+        <select name="priorite" class="form-input filter-select">
+            <option value="">Toutes les priorités</option>
+            <option value="urgent" {% if priorite_actuelle == "urgent" %}selected{% endif %}>Urgente</option>
+            <option value="high" {% if priorite_actuelle == "high" %}selected{% endif %}>Haute</option>
+            <option value="medium" {% if priorite_actuelle == "medium" %}selected{% endif %}>Moyenne</option>
+            <option value="low" {% if priorite_actuelle == "low" %}selected{% endif %}>Basse</option>
+        </select>
+
+        <select name="categorie" class="form-input filter-select">
+            <option value="">Toutes les catégories</option>
+            {% for cat in categories %}
+                <option value="{{ cat.pk }}" {% if categorie_actuelle == cat.pk|stringformat:"d" %}selected{% endif %}>{{ cat.nom }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit" class="btn btn-primary">Filtrer</button>
+    </form>
+
+    {% if taches %}
+    <div class="task-cards">
+        {% for tache in taches %}
+        <a href="{% url 'tache_detail' pk=tache.pk %}" class="task-card">
+            <div class="task-card-header">
+                <span class="task-status status-{{ tache.status }}"></span>
+                {% if tache.pk in tasks_with_notifications %}
+                    <span class="notification-dot"></span>
+                {% endif %}
+                <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+            </div>
+            <h3 class="task-card-title">{{ tache.title }}</h3>
+            {% if tache.description %}
+                <p class="task-card-desc">{{ tache.description|truncatewords:15 }}</p>
+            {% endif %}
+            <div class="task-card-footer">
+                {% if tache.categorie %}
+                    <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
+                {% endif %}
+                {% if tache.deadline %}
+                    <span class="task-date deadline">{{ tache.deadline|date:"d/m/Y" }}</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if taches.has_other_pages %}
+    <div class="pagination">
+        {% if taches.has_previous %}
+            <a href="?page={{ taches.previous_page_number }}{% if statut_actuel %}&statut={{ statut_actuel }}{% endif %}{% if priorite_actuelle %}&priorite={{ priorite_actuelle }}{% endif %}{% if categorie_actuelle %}&categorie={{ categorie_actuelle }}{% endif %}{% if recherche_actuelle %}&q={{ recherche_actuelle }}{% endif %}" class="btn btn-sm">&laquo; Précédent</a>
+        {% endif %}
+
+        <span class="pagination-info">Page {{ taches.number }} sur {{ taches.paginator.num_pages }}</span>
+
+        {% if taches.has_next %}
+            <a href="?page={{ taches.next_page_number }}{% if statut_actuel %}&statut={{ statut_actuel }}{% endif %}{% if priorite_actuelle %}&priorite={{ priorite_actuelle }}{% endif %}{% if categorie_actuelle %}&categorie={{ categorie_actuelle }}{% endif %}{% if recherche_actuelle %}&q={{ recherche_actuelle }}{% endif %}" class="btn btn-sm">Suivant &raquo;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+        <div class="empty-state">
+            <p>Aucune tâche trouvée.</p>
+            <a href="{% url 'tache_create' %}" class="btn btn-primary">Créer une tâche</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

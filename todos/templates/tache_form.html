@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <a href="{% url 'tache_list' %}" class="back-link">&larr; Retour</a>
+        <h2>{{ titre_page }}</h2>
+    </div>
+
+    <form method="post" class="task-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="id_title">Titre *</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+                <span class="form-error">{{ form.title.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_description">Description</label>
+            {{ form.description }}
+        </div>
+
+        <div class="form-group">
+            <label>Catégorie</label>
+            <div class="categorie-grid">
+                {% for cat in categories %}
+                <label class="categorie-card {% if form.categorie.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}">
+                    <input type="radio" name="categorie" value="{{ cat.pk }}" {% if form.categorie.value|stringformat:"s" == cat.pk|stringformat:"s" %}checked{% endif %} class="cat-radio">
+                    <span class="cat-icon">{% render_icon cat.icon 22 %}</span>
+                    <span class="cat-name">{{ cat.nom }}</span>
+                    <span class="cat-desc">{{ cat.description }}</span>
+                </label>
+                {% endfor %}
+                <label class="categorie-card cat-none">
+                    <input type="radio" name="categorie" value="" {% if not form.categorie.value %}checked{% endif %} class="cat-radio">
+                    <span class="cat-icon">{% render_icon "home" 22 %}</span>
+                    <span class="cat-name">Aucune</span>
+                </label>
+            </div>
+            {% if form.categorie.errors %}
+                <span class="form-error">{{ form.categorie.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>Priorité</label>
+            <div class="priority-choices">
+                {% for radio in form.priority %}
+                    <label class="priority-option priority-{{ radio.choice_value }}">
+                        {{ radio.tag }}
+                        <span class="priority-pill">{{ radio.choice_label }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="id_start_date">Date de début</label>
+                {{ form.start_date }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_deadline">Échéance</label>
+                {{ form.deadline }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'tache_list' %}" class="btn btn-cancel">Annuler</a>
+            <button type="submit" class="btn btn-primary">{{ bouton_texte }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

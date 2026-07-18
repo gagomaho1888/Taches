@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-header">
+        <a href="{% url 'groupe_list' %}" class="back-link">&larr; Retour</a>
+        <div class="detail-actions">
+            {% if is_leader %}
+                <a href="{% url 'groupe_delete' pk=groupe.pk %}" class="btn btn-danger" onclick="return confirm('Supprimer ce groupe et toutes ses tâches ?')">Supprimer le groupe</a>
+            {% else %}
+                <a href="{% url 'groupe_leave' pk=groupe.pk %}" class="btn btn-danger">Quitter le groupe</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-top">
+            <span class="priority-badge priority-medium">Groupe</span>
+            {% if is_leader %}
+                <span class="priority-badge priority-urgent">Leader</span>
+            {% endif %}
+        </div>
+
+        <h2>{{ groupe.nom }}</h2>
+
+        {% if groupe.description %}
+            <p class="detail-desc">{{ groupe.description }}</p>
+        {% endif %}
+
+        <div class="detail-meta">
+            <div class="meta-item">
+                <span class="meta-label">Code</span>
+                <span class="meta-value" style="font-family:monospace; font-size:1.1rem; letter-spacing:0.1em; color:var(--accent-light);">{{ code }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Leader</span>
+                <span class="meta-value">{{ groupe.leader.username }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Membres</span>
+                <span class="meta-value">{{ membres.count }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Créé le</span>
+                <span class="meta-value">{{ groupe.created_at|date:"d/m/Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Membres -->
+    <div class="detail-card">
+        <h3>Membres</h3>
+        <ul class="task-list">
+            {% for m in membres %}
+            <li class="task-item">
+                <span class="task-status status-progress"></span>
+                <div class="task-info">
+                    <span class="task-title">{{ m.user.username }}</span>
+                    <span class="task-meta">
+                        <span class="priority-badge {% if m.role == 'leader' %}priority-urgent{% else %}priority-medium{% endif %}">
+                            {{ m.get_role_display }}
+                        </span>
+                        <span class="task-date">Rejoint le {{ m.joined_at|date:"d/m/Y" }}</span>
+                    </span>
+                </div>
+                {% if is_leader and m.user != request.user %}
+                    <form method="post" action="{% url 'groupe_remove_member' pk=groupe.pk member_pk=m.pk %}" class="inline-form">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Retirer ce membre ?')">Retirer</button>
+                    </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Assigner une tâche (leader uniquement) -->
+    {% if is_leader %}
+    <div class="detail-card">
+        <h3>Assigner une tâche</h3>
+        <form method="post" action="{% url 'groupe_assign_task' pk=groupe.pk %}">
+            {% csrf_token %}
+
+            {% for field in assign_form %}
+            <div class="form-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <p class="help-text">{{ field.help_text }}</p>
+                {% endif %}
+                {% if field.errors %}
+                    <ul class="errorlist">
+                        {% for error in field.errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="btn btn-primary">Assigner</button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Tâches du groupe -->
+    <div class="detail-card">
+        <h3>Tâches du groupe ({{ taches.count }})</h3>
+        {% if taches %}
+        <ul class="task-list">
+            {% for tache in taches %}
+            <li class="task-item">
+                <span class="task-status status-{{ tache.status }}"></span>
+                {% if tache.pk in tasks_with_notifications %}
+                    <span class="notification-dot"></span>
+                {% endif %}
+                <div class="task-info">
+                    <span class="task-title">{{ tache.title }}</span>
+                    <span class="task-meta">
+                        <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+                        <span class="task-date">Assignée à {{ tache.user.username }}</span>
+                        {% if tache.deadline %}
+                            <span class="task-date deadline">{{ tache.deadline|date:"d/m/Y" }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <a href="{% url 'tache_detail' pk=tache.pk %}" class="task-link">Voir</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state-sm">Aucune tâche assignée pour le moment.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

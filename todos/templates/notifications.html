@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="list-container">
+    <div class="list-header">
+        <h2>Notifications</h2>
+        {% if notifications %}
+        <form method="post" action="{% url 'notification_mark_all_read' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">Tout marquer comme lu</button>
+        </form>
+        {% endif %}
+    </div>
+
+    {% if notifications %}
+    <ul class="notif-list-full">
+        {% for notif in notifications %}
+        <li class="notif-item-full {% if notif.is_read %}read{% endif %}">
+            <span class="notif-dot {% if notif.is_read %}dot-read{% endif %}"></span>
+            <div class="notif-info">
+                <span class="notif-title">{{ notif.title }}</span>
+                <span class="notif-message">{{ notif.message }}</span>
+                <span class="notif-date">{{ notif.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="notif-actions">
+                {% if not notif.is_read %}
+                <a href="{% url 'notification_mark_read' pk=notif.pk %}" class="btn btn-sm">Marquer lu</a>
+                {% endif %}
+                <form method="post" action="{% url 'notification_delete' pk=notif.pk %}" class="inline-form">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <div class="empty-state">
+        <p>Aucune notification.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

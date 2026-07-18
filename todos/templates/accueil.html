@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% block content %}
+    <!-- Salutation -->
+    <section class="greeting">
+        <h2>Bonjour, {{ user.first_name|default:user.username }} !</h2>
+        <p>Voici un résumé de vos tâches.</p>
+    </section>
+
+    <!-- Cartes de stats -->
+    <section class="stats-grid stats-grid-3">
+        <div class="stat-card stat-total">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card stat-todo">
+            <div class="stat-number">{{ todo }}</div>
+            <div class="stat-label">À faire</div>
+        </div>
+        <div class="stat-card stat-done">
+            <div class="stat-number">{{ done }}</div>
+            <div class="stat-label">Terminées</div>
+        </div>
+    </section>
+
+    <!-- Priorités + Activité récente -->
+    <section class="dashboard-row">
+        <div class="card">
+            <h3>Par priorité</h3>
+            <div class="priority-bars">
+                <div class="priority-item">
+                    <span class="priority-label">Urgente</span>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-urgent" style="width: {% if total > 0 %}{% widthratio urgent total 100 %}{% endif %}%"></div>
+                    </div>
+                    <span class="priority-count">{{ urgent }}</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-label">Haute</span>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-high" style="width: {% if total > 0 %}{% widthratio high total 100 %}{% endif %}%"></div>
+                    </div>
+                    <span class="priority-count">{{ high }}</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-label">Moyenne</span>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-medium" style="width: {% if total > 0 %}{% widthratio medium total 100 %}{% endif %}%"></div>
+                    </div>
+                    <span class="priority-count">{{ medium }}</span>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-label">Basse</span>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-low" style="width: {% if total > 0 %}{% widthratio low total 100 %}{% endif %}%"></div>
+                    </div>
+                    <span class="priority-count">{{ low }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Activité récente</h3>
+            <p class="card-subtitle">{{ recent_count }} tâche(s) créée(s) cette semaine</p>
+            {% if recent_tasks %}
+            <ul class="task-list">
+                {% for tache in recent_tasks %}
+                <li class="task-item">
+                    <span class="task-status status-{{ tache.status }}"></span>
+                    {% if tache.pk in tasks_with_notifications %}
+                        <span class="notification-dot"></span>
+                    {% endif %}
+                    <div class="task-info">
+                        <span class="task-title">{{ tache.title }}</span>
+                        <span class="task-meta">
+                            {% if tache.categorie %}
+                                <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon %} {{ tache.categorie.nom }}</span>
+                            {% endif %}
+                            <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+                        </span>
+                    </div>
+                    <span class="task-date">{{ tache.updated_at|date:"d/m H:i" }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-state">Aucune tâche pour le moment.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Échéances -->
+    <section class="card-section">
+        <div class="card">
+            <h3>Prochaines échéances</h3>
+            {% if upcoming %}
+            <ul class="task-list">
+                {% for tache in upcoming %}
+                <li class="task-item">
+                    <span class="task-status status-{{ tache.status }}"></span>
+                    {% if tache.pk in tasks_with_notifications %}
+                        <span class="notification-dot"></span>
+                    {% endif %}
+                    <div class="task-info">
+                        <span class="task-title">{{ tache.title }}</span>
+                        <span class="task-meta">
+                            <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+                        </span>
+                    </div>
+                    <span class="task-date deadline">{{ tache.deadline|date:"d/m/Y" }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="empty-state">Aucune échéance à venir.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Onglets Catégories -->
+    <section class="card-section">
+        <div class="card tab-card">
+            <h3>Mes catégories</h3>
+
+            <div class="tabs-bar">
+                <a href="{% url 'accueil' %}" class="tab-link {% if not categorie_active %}active{% endif %}">
+                    Toutes
+                    <span class="tab-count">{{ total }}</span>
+                </a>
+                {% for cat in categories %}
+                <a href="{% url 'accueil' %}?cat={{ cat.pk }}" class="tab-link {% if categorie_active.pk == cat.pk %}active{% endif %}">
+                    {% render_icon cat.icon %} {{ cat.nom }}
+                    <span class="tab-count">{{ cat.task_count }}</span>
+                </a>
+                {% endfor %}
+            </div>
+
+            <div class="tab-content">
+                {% if categorie_active %}
+                    <div class="tab-header">
+                        <span class="tab-header-icon">{% render_icon categorie_active.icon 24 %}</span>
+                        <div>
+                            <span class="tab-header-name">{{ categorie_active.nom }}</span>
+                            <span class="tab-header-desc">{{ categorie_active.description }}</span>
+                        </div>
+                    </div>
+                {% endif %}
+
+                {% if taches_categorie %}
+                <ul class="task-list">
+                    {% for tache in taches_categorie %}
+                    <li class="task-item">
+                        <span class="task-status status-{{ tache.status }}"></span>
+                        {% if tache.pk in tasks_with_notifications %}
+                            <span class="notification-dot"></span>
+                        {% endif %}
+                        <div class="task-info">
+                            <span class="task-title">{{ tache.title }}</span>
+                            <span class="task-meta">
+                                <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+                                {% if tache.deadline %}
+                                    <span class="task-date deadline">{{ tache.deadline|date:"d/m/Y" }}</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <a href="{% url 'tache_detail' pk=tache.pk %}" class="task-link">Voir</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-state">
+                    {% if categorie_active %}
+                        Aucune tâche dans "{{ categorie_active.nom }}".
+                    {% else %}
+                        Sélectionnez une catégorie pour voir ses tâches.
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Notifications -->
+    {% if unread_notifications %}
+    <section class="card-section">
+        <div class="card">
+            <h3>Notifications</h3>
+            <ul class="notif-list">
+                {% for notif in unread_notifications %}
+                <li class="notif-item">
+                    <span class="notif-dot"></span>
+                    <div class="notif-info">
+                        <span class="notif-title">{{ notif.title }}</span>
+                        <span class="notif-date">{{ notif.created_at|date:"d/m H:i" }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
+{% endblock %}

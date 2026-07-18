@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load icon_tags %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-header">
+        <a href="{% url 'tache_list' %}" class="back-link">&larr; Retour</a>
+        <div class="detail-actions">
+            <a href="{% url 'tache_edit' pk=tache.pk %}" class="btn btn-primary">Modifier</a>
+            <a href="{% url 'tache_delete' pk=tache.pk %}" class="btn btn-danger">Supprimer</a>
+        </div>
+    </div>
+
+    <div class="detail-card">
+        <div class="detail-top">
+            <span class="task-status status-{{ tache.status }} status-lg"></span>
+            <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
+            {% if tache.categorie %}
+                <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
+            {% endif %}
+        </div>
+
+        <h2>{{ tache.title }}</h2>
+
+        {% if tache.description %}
+            <p class="detail-desc">{{ tache.description }}</p>
+        {% endif %}
+
+        <div class="detail-meta">
+            <div class="meta-item">
+                <span class="meta-label">Statut</span>
+                <span class="meta-value">{{ tache.get_status_display }}</span>
+            </div>
+            {% if tache.start_date %}
+            <div class="meta-item">
+                <span class="meta-label">Début</span>
+                <span class="meta-value">{{ tache.start_date|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% endif %}
+            {% if tache.deadline %}
+            <div class="meta-item">
+                <span class="meta-label">Échéance</span>
+                <span class="meta-value deadline">{{ tache.deadline|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% endif %}
+            {% if tache.completed_at %}
+            <div class="meta-item">
+                <span class="meta-label">Terminée le</span>
+                <span class="meta-value">{{ tache.completed_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% endif %}
+            <div class="meta-item">
+                <span class="meta-label">Créée le</span>
+                <span class="meta-value">{{ tache.created_at|date:"d/m/Y H:i" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sous-tâches -->
+    <div class="detail-card">
+        <h3>Sous-tâches {% if total_sub > 0 %}<span class="sub-progress">{{ done_sub }}/{{ total_sub }}</span>{% endif %}</h3>
+
+        {% if sous_taches %}
+        <ul class="subtask-list">
+            {% for st in sous_taches %}
+            <li class="subtask-item {% if st.completed %}completed{% endif %}">
+                <form method="post" class="inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="toggle_subtask" value="1">
+                    <input type="hidden" name="subtask_id" value="{{ st.pk }}">
+                    <button type="submit" class="subtask-check">{% if st.completed %}&#9745;{% else %}&#9744;{% endif %}</button>
+                </form>
+                <span class="subtask-title">{{ st.title }}</span>
+                <form method="post" class="inline-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_subtask" value="1">
+                    <input type="hidden" name="subtask_id" value="{{ st.pk }}">
+                    <button type="submit" class="subtask-delete">&times;</button>
+                </form>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="empty-state-sm">Pas de sous-tâche.</p>
+        {% endif %}
+
+        <form method="post" class="subtask-add">
+            {% csrf_token %}
+            {{ sub_form.title }}
+            <input type="hidden" name="add_subtask" value="1">
+            <button type="submit" class="btn btn-primary btn-sm">Ajouter</button>
+        </form>
+    </div>
+
+    <!-- Commentaires -->
+    <div class="detail-card">
+        <h3>Commentaires ({{ comments.count }})</h3>
+        {% if comments %}
+        <div class="comment-list">
+            {% for comment in comments %}
+            <div class="comment-item">
+                <span class="comment-user">{{ comment.user.username }}</span>
+                <span class="comment-date">{{ comment.created_at|date:"d/m/Y H:i" }}</span>
+                <p class="comment-text">{{ comment.content }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state-sm">Aucun commentaire.</p>
+        {% endif %}
+
+        <form method="post" class="comment-add">
+            {% csrf_token %}
+            {{ comment_form.content }}
+            <input type="hidden" name="add_comment" value="1">
+            <button type="submit" class="btn btn-primary btn-sm">Publier</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

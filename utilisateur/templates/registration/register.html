@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - ToDoList</title>
+    <script>
+        (function() {
+            var saved = localStorage.getItem("theme");
+            if (saved) document.documentElement.setAttribute("data-theme", saved);
+        })();
+    </script>
+    <link rel="stylesheet" href="{% static 'css/accueil.css' %}">
+    <style>
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2.5rem;
+        }
+        .login-card h1 {
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent-light);
+            margin-bottom: 0.3rem;
+        }
+        .login-card .login-subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        .login-card .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .login-card .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+        }
+        .login-card .form-input {
+            width: 100%;
+            padding: 0.7rem 0.8rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface-hover);
+            color: var(--text);
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .login-card .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .login-card .btn-primary {
+            width: 100%;
+            padding: 0.7rem;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .login-card .help-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+        .login-card .errorlist {
+            list-style: none;
+            padding: 0;
+            margin: 0.3rem 0 0 0;
+        }
+        .login-card .errorlist li {
+            font-size: 0.8rem;
+            color: var(--urgent);
+        }
+        .login-card .link-text {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .login-card .link-text a {
+            color: var(--accent-light);
+            text-decoration: none;
+        }
+        .login-card .link-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-card">
+            <h1>ToDoList</h1>
+            <p class="login-subtitle">Créez votre compte</p>
+
+            {% if messages %}
+                {% for msg in messages %}
+                    <div class="login-error">{{ msg }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="form-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <p class="help-text">{{ field.help_text }}</p>
+                    {% endif %}
+                    {% if field.errors %}
+                        <ul class="errorlist">
+                            {% for error in field.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">S'inscrire</button>
+            </form>
+            <p class="link-text">Déjà un compte ? <a href="{% url 'login' %}">Se connecter</a></p>
+        </div>
+    </div>
+
+    <script src="{% static 'js/accueil.js' %}"></script>
+</body>
+</html>

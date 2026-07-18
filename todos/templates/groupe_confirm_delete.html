@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="delete-container">
+    <div class="delete-card">
+        <h2>Supprimer le groupe</h2>
+        <p class="delete-title">{{ groupe.nom }}</p>
+        <p class="delete-warning">Cette action est irréversible. Toutes les tâches associées seront également supprimées.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-actions" style="justify-content: center;">
+                <a href="{% url 'groupe_detail' pk=groupe.pk %}" class="btn btn-cancel">Annuler</a>
+                <button type="submit" class="btn btn-danger">Supprimer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

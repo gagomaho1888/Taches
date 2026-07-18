@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container delete-container">
+    <div class="form-header">
+        <a href="{% url 'tache_detail' pk=tache.pk %}" class="back-link">&larr; Retour</a>
+    </div>
+
+    <div class="delete-card">
+        <h2>Supprimer la tâche ?</h2>
+        <p class="delete-title">"{{ tache.title }}"</p>
+        <p class="delete-warning">Cette action est irréversible.</p>
+
+        <div class="form-actions">
+            <a href="{% url 'tache_detail' pk=tache.pk %}" class="btn btn-cancel">Annuler</a>
+            <form method="post" class="inline-form">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Supprimer</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
