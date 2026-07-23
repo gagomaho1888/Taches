@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: aimlist
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn to_do_list.wsgi:application
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: DJANGO_ALLOWED_HOSTS
+        sync: false
+      - key: PYTHONDONTWRITEBYTECODE
+        value: "1"
+    preStartCommand: python manage.py migrate --noinput && python manage.py collectstatic --noinput
