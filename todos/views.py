@@ -1,31 +1,52 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, reverse
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Case, When, IntegerField
+from django.db.models import Count, Q
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from datetime import timedelta
 
 from .models import Tache, Categorie, SousTache, Comment, Notification, Groupe, MembreGroupe
-from .forms import TacheForm, SousTacheForm, CommentForm, GroupeForm, RejoindreGroupeForm, AssignTacheForm
-from .utils import update_task_statuses
+from .forms import TacheForm, SousTacheForm, CommentForm, GroupeForm, RejoindreGroupeForm, AssignTacheForm, CategorieForm
+from .utils import get_effective_status, get_effective_status_label
 
 
 @login_required
 def accueil(request):
     user = request.user
-    update_task_statuses(user)
     now = timezone.now()
     week_ago = now - timedelta(days=7)
 
     base_qs = Tache.objects.filter(user=user)
 
-    # Stats en 2 requêtes au lieu de 9
     status_stats = base_qs.aggregate(
         total=Count("id"),
-        todo=Count("id", filter=Q(status="todo")),
+        progress=Count("id", filter=Q(status="progress")),
         done=Count("id", filter=Q(status="done")),
+        cancelled=Count("id", filter=Q(status="cancelled")),
     )
+    overdue_count = base_qs.filter(
+        status="progress", deadline__isnull=False, deadline__lt=now
+    ).count()
+    status_stats["overdue"] = overdue_count
+
+    overdue_tasks = base_qs.filter(
+        status="progress", deadline__isnull=False, deadline__lt=now
+    )
+    for tache in overdue_tasks:
+        if not Notification.objects.filter(
+            user=user, task=tache, notification_type="overdue"
+        ).exists():
+            Notification.objects.create(
+                user=user,
+                task=tache,
+                title="Tâche en retard",
+                message=f"La tâche « {tache.title} » a dépassé son échéance.",
+                notification_type="overdue",
+            )
     priority_stats = base_qs.aggregate(
         low=Count("id", filter=Q(priority="low")),
         medium=Count("id", filter=Q(priority="medium")),
@@ -35,7 +56,6 @@ def accueil(request):
 
     recent_count = base_qs.filter(created_at__gte=week_ago).count()
 
-    # Catégorie sélectionnée via onglet
     cat_id = request.GET.get("cat", "")
     categories = Categorie.objects.annotate(
         task_count=Count("tache", filter=Q(tache__user=user))
@@ -50,7 +70,7 @@ def accueil(request):
 
     upcoming = base_qs.filter(
         deadline__gte=now,
-        status="todo"
+        status="progress"
     ).order_by("deadline")[:5]
 
     recent_tasks = base_qs.order_by("-updated_at")[:3]
@@ -84,13 +104,12 @@ def accueil(request):
 @login_required
 def tache_list(request):
     user = request.user
-    update_task_statuses(user)
     statut = request.GET.get("statut", "")
     priorite = request.GET.get("priorite", "")
     categorie = request.GET.get("categorie", "")
     recherche = request.GET.get("q", "")
 
-    taches = Tache.objects.filter(user=user)
+    taches = Tache.objects.filter(user=user).select_related("categorie", "groupe")
 
     if statut:
         taches = taches.filter(status=statut)
@@ -130,22 +149,17 @@ def tache_list(request):
 
 @login_required
 def tache_create(request):
-    update_task_statuses(request.user)
     if request.method == "POST":
         form = TacheForm(request.POST)
         if form.is_valid():
             tache = form.save(commit=False)
             tache.user = request.user
-            # Auto-assign status based on time
             now = timezone.now()
-            if tache.deadline and tache.deadline < now:
-                tache.status = "done"
+            if tache.status == "done" and not tache.completed_at:
                 tache.completed_at = now
-            else:
-                tache.status = "todo"
             tache.save()
             messages.success(request, "Tâche créée avec succès.")
-            return redirect("tache_detail", pk=tache.pk)
+            return redirect(f"/taches/{tache.pk}/?created=1")
     else:
         form = TacheForm()
 
@@ -159,8 +173,13 @@ def tache_create(request):
 
 @login_required
 def tache_detail(request, pk):
-    tache = get_object_or_404(Tache, pk=pk, user=request.user)
-    update_task_statuses(request.user)
+    tache = get_object_or_404(Tache, pk=pk)
+    if tache.user != request.user:
+        if not tache.groupe or not MembreGroupe.objects.filter(
+            groupe=tache.groupe, user=request.user
+        ).exists():
+            from django.http import Http404
+            raise Http404
     sous_taches = tache.sous_taches.all()
     comments = tache.comments.order_by("-created_at")
 
@@ -193,6 +212,16 @@ def tache_detail(request, pk):
                 comment.tache = tache
                 comment.user = request.user
                 comment.save()
+
+                if tache.user != request.user:
+                    Notification.objects.create(
+                        user=tache.user,
+                        task=tache,
+                        title="Nouveau commentaire",
+                        message=f"{request.user.username} a commenté sur « {tache.title} ».",
+                        notification_type="comment",
+                    )
+
                 return redirect("tache_detail", pk=pk)
 
     sub_form = SousTacheForm()
@@ -214,7 +243,6 @@ def tache_detail(request, pk):
 @login_required
 def tache_edit(request, pk):
     tache = get_object_or_404(Tache, pk=pk, user=request.user)
-    update_task_statuses(request.user)
 
     if request.method == "POST":
         form = TacheForm(request.POST, instance=tache)
@@ -278,13 +306,14 @@ def notification_mark_all_read(request):
 @login_required
 def notification_delete(request, pk):
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
-    notif.delete()
+    if request.method == "POST":
+        notif.delete()
     return redirect("notifications")
 
 
 @login_required
 def groupe_list(request):
-    groupes = Groupe.objects.filter(membres__user=request.user)
+    groupes = Groupe.objects.filter(membres__user=request.user).select_related("leader")
     rejoindre_form = RejoindreGroupeForm()
     return render(request, "groupe_list.html", {
         "groupes": groupes,
@@ -472,7 +501,7 @@ def groupe_assign_task(request, pk):
                 description=form.cleaned_data.get("description", ""),
                 priority=form.cleaned_data["priority"],
                 deadline=form.cleaned_data.get("deadline"),
-                status="todo",
+                status="progress",
             )
 
             Notification.objects.create(
@@ -487,3 +516,60 @@ def groupe_assign_task(request, pk):
             return redirect("groupe_detail", pk=pk)
 
     return redirect("groupe_detail", pk=pk)
+
+
+@login_required
+@require_POST
+def tache_toggle_status(request, pk):
+    tache = get_object_or_404(Tache, pk=pk, user=request.user)
+    now = timezone.now()
+
+    if tache.status == "done":
+        tache.status = "progress"
+        tache.completed_at = None
+    else:
+        tache.status = "done"
+        tache.completed_at = now
+
+    Tache.objects.filter(pk=tache.pk).select_for_update().update(
+        status=tache.status, completed_at=tache.completed_at
+    )
+    tache.refresh_from_db()
+
+    if tache.status == "done" and tache.groupe:
+        membres = MembreGroupe.objects.filter(groupe=tache.groupe).exclude(user=request.user).select_related("user")
+        for m in membres:
+            Notification.objects.create(
+                user=m.user,
+                task=tache,
+                title="Tâche terminée",
+                message=f"{request.user.username} a terminé la tâche « {tache.title} ».",
+                notification_type="task_completed",
+            )
+
+    effective = get_effective_status(tache)
+
+    return JsonResponse({
+        "ok": True,
+        "new_status": effective,
+        "new_label": get_effective_status_label(effective),
+        "completed_at": tache.completed_at.strftime("%d/%m/%Y %H:%M") if tache.completed_at else None,
+    })
+
+
+@login_required
+def categorie_create(request):
+    if request.method == "POST":
+        form = CategorieForm(request.POST)
+        if form.is_valid():
+            form.save()
+            next_url = request.GET.get("next", "")
+            if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                next_url = ""
+            target = reverse("tache_create") if not next_url else next_url
+            messages.success(request, "Catégorie créée avec succès.")
+            return redirect(target)
+    else:
+        form = CategorieForm()
+
+    return render(request, "categorie_form.html", {"form": form})

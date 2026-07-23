@@ -2,21 +2,34 @@
 {% load icon_tags %}
 
 {% block content %}
+{% if request.GET.created == "1" %}
+<div id="narrator-banner" class="narrator-banner" style="display:none;">
+    <span class="narrator-banner-text">Nouvelle tâche créée :</span>
+    <span class="narrator-banner-title">{{ tache.title }}</span>
+    <button id="narrator-play" class="narrator-play-btn" data-title="{{ tache.title }}">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Écouter
+    </button>
+    <button id="narrator-dismiss" class="narrator-dismiss-btn">&times;</button>
+</div>
+{% endif %}
 <div class="detail-container">
     <div class="detail-header">
         <a href="{% url 'tache_list' %}" class="back-link">&larr; Retour</a>
+        {% if tache.user == request.user %}
         <div class="detail-actions">
             <a href="{% url 'tache_edit' pk=tache.pk %}" class="btn btn-primary">Modifier</a>
             <a href="{% url 'tache_delete' pk=tache.pk %}" class="btn btn-danger">Supprimer</a>
         </div>
+        {% endif %}
     </div>
 
     <div class="detail-card">
         <div class="detail-top">
-            <span class="task-status status-{{ tache.status }} status-lg"></span>
+            <span class="task-status status-{{ tache.effective_status }} status-lg"></span>
             <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
             {% if tache.categorie %}
-                <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
+                <span class="tag" style="background-color: {{ tache.categorie.couleur|sanitize_color }}20; color: {{ tache.categorie.couleur|sanitize_color }}; border: 1px solid {{ tache.categorie.couleur|sanitize_color }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
             {% endif %}
         </div>
 
@@ -29,7 +42,7 @@
         <div class="detail-meta">
             <div class="meta-item">
                 <span class="meta-label">Statut</span>
-                <span class="meta-value">{{ tache.get_status_display }}</span>
+                <span class="meta-value">{{ tache.effective_status_display }}</span>
             </div>
             {% if tache.start_date %}
             <div class="meta-item">
@@ -56,7 +69,6 @@
         </div>
     </div>
 
-    <!-- Sous-tâches -->
     <div class="detail-card">
         <h3>Sous-tâches {% if total_sub > 0 %}<span class="sub-progress">{{ done_sub }}/{{ total_sub }}</span>{% endif %}</h3>
 
@@ -92,7 +104,6 @@
         </form>
     </div>
 
-    <!-- Commentaires -->
     <div class="detail-card">
         <h3>Commentaires ({{ comments.count }})</h3>
         {% if comments %}

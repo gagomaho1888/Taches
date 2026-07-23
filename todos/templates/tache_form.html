@@ -25,25 +25,11 @@
         </div>
 
         <div class="form-group">
-            <label>Catégorie</label>
-            <div class="categorie-grid">
-                {% for cat in categories %}
-                <label class="categorie-card {% if form.categorie.value|stringformat:"s" == cat.pk|stringformat:"s" %}selected{% endif %}">
-                    <input type="radio" name="categorie" value="{{ cat.pk }}" {% if form.categorie.value|stringformat:"s" == cat.pk|stringformat:"s" %}checked{% endif %} class="cat-radio">
-                    <span class="cat-icon">{% render_icon cat.icon 22 %}</span>
-                    <span class="cat-name">{{ cat.nom }}</span>
-                    <span class="cat-desc">{{ cat.description }}</span>
-                </label>
-                {% endfor %}
-                <label class="categorie-card cat-none">
-                    <input type="radio" name="categorie" value="" {% if not form.categorie.value %}checked{% endif %} class="cat-radio">
-                    <span class="cat-icon">{% render_icon "home" 22 %}</span>
-                    <span class="cat-name">Aucune</span>
-                </label>
+            <label for="id_categorie">Catégorie</label>
+            <div class="categorie-select-row">
+                {{ form.categorie }}
+                <a href="{% url 'categorie_create' %}?next={% url 'tache_create' %}" class="btn btn-sm cat-add-link">Nouvelle catégorie</a>
             </div>
-            {% if form.categorie.errors %}
-                <span class="form-error">{{ form.categorie.errors.0 }}</span>
-            {% endif %}
         </div>
 
         <div class="form-group">

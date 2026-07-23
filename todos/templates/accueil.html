@@ -2,21 +2,23 @@
 {% load icon_tags %}
 
 {% block content %}
-    <!-- Salutation -->
     <section class="greeting">
         <h2>Bonjour, {{ user.first_name|default:user.username }} !</h2>
         <p>Voici un résumé de vos tâches.</p>
     </section>
 
-    <!-- Cartes de stats -->
-    <section class="stats-grid stats-grid-3">
+    <section class="stats-grid stats-grid-4">
         <div class="stat-card stat-total">
             <div class="stat-number">{{ total }}</div>
             <div class="stat-label">Total</div>
         </div>
-        <div class="stat-card stat-todo">
-            <div class="stat-number">{{ todo }}</div>
-            <div class="stat-label">À faire</div>
+        <div class="stat-card stat-progress">
+            <div class="stat-number">{{ progress }}</div>
+            <div class="stat-label">En cours</div>
+        </div>
+        <div class="stat-card stat-overdue">
+            <div class="stat-number">{{ overdue }}</div>
+            <div class="stat-label">En retard</div>
         </div>
         <div class="stat-card stat-done">
             <div class="stat-number">{{ done }}</div>
@@ -24,7 +26,6 @@
         </div>
     </section>
 
-    <!-- Priorités + Activité récente -->
     <section class="dashboard-row">
         <div class="card">
             <h3>Par priorité</h3>
@@ -66,8 +67,12 @@
             {% if recent_tasks %}
             <ul class="task-list">
                 {% for tache in recent_tasks %}
-                <li class="task-item">
-                    <span class="task-status status-{{ tache.status }}"></span>
+                <li class="task-item {% if tache.effective_status == 'done' %}completed-toggle{% endif %}">
+                    <div class="task-toggle">
+                        <input type="checkbox" id="toggle-recent-{{ tache.pk }}" data-task-id="{{ tache.pk }}" {% if tache.effective_status == 'done' %}checked{% endif %}>
+                        <label class="task-toggle-label" for="toggle-recent-{{ tache.pk }}"></label>
+                    </div>
+                    <span class="task-status status-{{ tache.effective_status }}"></span>
                     {% if tache.pk in tasks_with_notifications %}
                         <span class="notification-dot"></span>
                     {% endif %}
@@ -75,7 +80,7 @@
                         <span class="task-title">{{ tache.title }}</span>
                         <span class="task-meta">
                             {% if tache.categorie %}
-                                <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon %} {{ tache.categorie.nom }}</span>
+                                <span class="tag" style="background-color: {{ tache.categorie.couleur|sanitize_color }}20; color: {{ tache.categorie.couleur|sanitize_color }}; border: 1px solid {{ tache.categorie.couleur|sanitize_color }}40;">{% render_icon tache.categorie.icon %} {{ tache.categorie.nom }}</span>
                             {% endif %}
                             <span class="priority-badge priority-{{ tache.priority }}">{{ tache.get_priority_display }}</span>
                         </span>
@@ -90,15 +95,18 @@
         </div>
     </section>
 
-    <!-- Échéances -->
     <section class="card-section">
         <div class="card">
             <h3>Prochaines échéances</h3>
             {% if upcoming %}
             <ul class="task-list">
                 {% for tache in upcoming %}
-                <li class="task-item">
-                    <span class="task-status status-{{ tache.status }}"></span>
+                <li class="task-item {% if tache.effective_status == 'done' %}completed-toggle{% endif %}">
+                    <div class="task-toggle">
+                        <input type="checkbox" id="toggle-upcoming-{{ tache.pk }}" data-task-id="{{ tache.pk }}" {% if tache.effective_status == 'done' %}checked{% endif %}>
+                        <label class="task-toggle-label" for="toggle-upcoming-{{ tache.pk }}"></label>
+                    </div>
+                    <span class="task-status status-{{ tache.effective_status }}"></span>
                     {% if tache.pk in tasks_with_notifications %}
                         <span class="notification-dot"></span>
                     {% endif %}
@@ -118,7 +126,6 @@
         </div>
     </section>
 
-    <!-- Onglets Catégories -->
     <section class="card-section">
         <div class="card tab-card">
             <h3>Mes catégories</h3>
@@ -150,8 +157,12 @@
                 {% if taches_categorie %}
                 <ul class="task-list">
                     {% for tache in taches_categorie %}
-                    <li class="task-item">
-                        <span class="task-status status-{{ tache.status }}"></span>
+                    <li class="task-item {% if tache.effective_status == 'done' %}completed-toggle{% endif %}">
+                        <div class="task-toggle">
+                            <input type="checkbox" id="toggle-cat-{{ tache.pk }}" data-task-id="{{ tache.pk }}" {% if tache.effective_status == 'done' %}checked{% endif %}>
+                            <label class="task-toggle-label" for="toggle-cat-{{ tache.pk }}"></label>
+                        </div>
+                        <span class="task-status status-{{ tache.effective_status }}"></span>
                         {% if tache.pk in tasks_with_notifications %}
                             <span class="notification-dot"></span>
                         {% endif %}
@@ -181,7 +192,6 @@
         </div>
     </section>
 
-    <!-- Notifications -->
     {% if unread_notifications %}
     <section class="card-section">
         <div class="card">

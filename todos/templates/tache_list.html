@@ -13,8 +13,9 @@
 
         <select name="statut" class="form-input filter-select">
             <option value="">Tous les statuts</option>
-            <option value="todo" {% if statut_actuel == "todo" %}selected{% endif %}>À faire</option>
+            <option value="progress" {% if statut_actuel == "progress" %}selected{% endif %}>En cours</option>
             <option value="done" {% if statut_actuel == "done" %}selected{% endif %}>Terminé</option>
+            <option value="cancelled" {% if statut_actuel == "cancelled" %}selected{% endif %}>Annulée</option>
         </select>
 
         <select name="priorite" class="form-input filter-select">
@@ -38,9 +39,13 @@
     {% if taches %}
     <div class="task-cards">
         {% for tache in taches %}
-        <a href="{% url 'tache_detail' pk=tache.pk %}" class="task-card">
+        <div class="task-card {% if tache.effective_status == 'done' %}completed-toggle{% endif %}">
             <div class="task-card-header">
-                <span class="task-status status-{{ tache.status }}"></span>
+                <div class="task-toggle">
+                    <input type="checkbox" id="toggle-list-{{ tache.pk }}" data-task-id="{{ tache.pk }}" {% if tache.effective_status == 'done' %}checked{% endif %}>
+                    <label class="task-toggle-label" for="toggle-list-{{ tache.pk }}"></label>
+                </div>
+                <span class="task-status status-{{ tache.effective_status }}"></span>
                 {% if tache.pk in tasks_with_notifications %}
                     <span class="notification-dot"></span>
                 {% endif %}
@@ -52,13 +57,14 @@
             {% endif %}
             <div class="task-card-footer">
                 {% if tache.categorie %}
-                    <span class="tag" style="background-color: {{ tache.categorie.couleur }}20; color: {{ tache.categorie.couleur }}; border: 1px solid {{ tache.categorie.couleur }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
+                    <span class="tag" style="background-color: {{ tache.categorie.couleur|sanitize_color }}20; color: {{ tache.categorie.couleur|sanitize_color }}; border: 1px solid {{ tache.categorie.couleur|sanitize_color }}40;">{% render_icon tache.categorie.icon 14 %} {{ tache.categorie.nom }}</span>
                 {% endif %}
                 {% if tache.deadline %}
                     <span class="task-date deadline">{{ tache.deadline|date:"d/m/Y" }}</span>
                 {% endif %}
+                <a href="{% url 'tache_detail' pk=tache.pk %}" class="task-link">Voir</a>
             </div>
-        </a>
+        </div>
         {% endfor %}
     </div>
 

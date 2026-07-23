@@ -48,7 +48,6 @@
         </div>
     </div>
 
-    <!-- Membres -->
     <div class="detail-card">
         <h3>Membres</h3>
         <ul class="task-list">
@@ -75,7 +74,6 @@
         </ul>
     </div>
 
-    <!-- Assigner une tâche (leader uniquement) -->
     {% if is_leader %}
     <div class="detail-card">
         <h3>Assigner une tâche</h3>
@@ -104,14 +102,19 @@
     </div>
     {% endif %}
 
-    <!-- Tâches du groupe -->
     <div class="detail-card">
         <h3>Tâches du groupe ({{ taches.count }})</h3>
         {% if taches %}
         <ul class="task-list">
             {% for tache in taches %}
-            <li class="task-item">
-                <span class="task-status status-{{ tache.status }}"></span>
+            <li class="task-item {% if tache.effective_status == 'done' %}completed-toggle{% endif %}">
+                {% if tache.user == request.user %}
+                <div class="task-toggle">
+                    <input type="checkbox" id="toggle-groupe-{{ tache.pk }}" data-task-id="{{ tache.pk }}" {% if tache.effective_status == 'done' %}checked{% endif %}>
+                    <label class="task-toggle-label" for="toggle-groupe-{{ tache.pk }}"></label>
+                </div>
+                {% endif %}
+                <span class="task-status status-{{ tache.effective_status }}"></span>
                 {% if tache.pk in tasks_with_notifications %}
                     <span class="notification-dot"></span>
                 {% endif %}

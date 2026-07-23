@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-card" style="text-align:center; padding:3rem 2rem;">
+        <h1 style="font-size:4rem; margin-bottom:0.5rem; color:var(--urgent);">403</h1>
+        <h2>Accès interdit</h2>
+        <p class="empty-state" style="margin:1rem 0 2rem;">Vous n'avez pas la permission d'accéder à cette page.</p>
+        <a href="{% url 'accueil' %}" class="btn btn-primary">Retour à l'accueil</a>
+    </div>
+</div>
+{% endblock %}

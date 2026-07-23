@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Tache, Categorie, SousTache, Comment, Notification, Tag, TaskTag, Attachment, TaskHistory, TaskShare, Groupe, MembreGroupe
+from .models import Tache, Categorie, SousTache, Comment, Notification, Attachment, Groupe, MembreGroupe
 
 
 @admin.register(Tache)
@@ -27,29 +27,9 @@ class NotificationAdmin(admin.ModelAdmin):
     list_display = ('title', 'user', 'notification_type', 'is_read', 'created_at')
 
 
-@admin.register(Tag)
-class TagAdmin(admin.ModelAdmin):
-    list_display = ('name',)
-
-
-@admin.register(TaskTag)
-class TaskTagAdmin(admin.ModelAdmin):
-    list_display = ('tache', 'tag')
-
-
 @admin.register(Attachment)
 class AttachmentAdmin(admin.ModelAdmin):
     list_display = ('tache', 'file', 'uploaded_at')
-
-
-@admin.register(TaskHistory)
-class TaskHistoryAdmin(admin.ModelAdmin):
-    list_display = ('tache', 'user', 'action', 'created_at')
-
-
-@admin.register(TaskShare)
-class TaskShareAdmin(admin.ModelAdmin):
-    list_display = ('tache', 'user', 'permission')
 
 
 @admin.register(Groupe)

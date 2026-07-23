@@ -1,5 +1,6 @@
 from django import template
 from django.utils.safestring import mark_safe
+import re
 
 register = template.Library()
 
@@ -36,7 +37,6 @@ ICONS = {
     "seedling": '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V10"/><path d="M6 14c0-4.4 3.6-8 8-8 1.5 0 3 .4 4.2 1"/><path d="M2 18c0-4.4 3.6-8 8-8 1.5 0 3 .4 4.2 1"/><path d="M18 14c0-4.4 3.6-8 8-8 1.5 0 3 .4 4.2 1"/></svg>',
 }
 
-# Mapping emoji → identifiant
 EMOJI_TO_ICON = {
     "📚": "book",
     "💼": "briefcase",
@@ -83,3 +83,13 @@ def render_icon(icon_name, size=18):
 @register.filter
 def emoji_to_icon(emoji):
     return EMOJI_TO_ICON.get(emoji, "book")
+
+
+@register.filter
+def sanitize_color(value):
+    if not value:
+        return "#000000"
+    value = str(value).strip()
+    if re.match(r'^#[0-9A-Fa-f]{6}$', value):
+        return value
+    return "#000000"

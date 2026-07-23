@@ -1,122 +1,26 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="fr" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - ToDoList</title>
-    <script>
-        (function() {
-            var saved = localStorage.getItem("theme");
-            if (saved) document.documentElement.setAttribute("data-theme", saved);
-        })();
-    </script>
-    <link rel="stylesheet" href="{% static 'css/accueil.css' %}">
-    <style>
-        .login-page {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-card {
-            width: 100%;
-            max-width: 400px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 2.5rem;
-        }
-        .login-card h1 {
-            text-align: center;
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: var(--accent-light);
-            margin-bottom: 0.3rem;
-        }
-        .login-card .login-subtitle {
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 2rem;
-        }
-        .login-card .form-group {
-            margin-bottom: 1.2rem;
-        }
-        .login-card .form-group label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            margin-bottom: 0.4rem;
-        }
-        .login-card .form-input {
-            width: 100%;
-            padding: 0.7rem 0.8rem;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: var(--surface-hover);
-            color: var(--text);
-            font-size: 0.9rem;
-            font-family: inherit;
-            transition: border-color 0.2s;
-        }
-        .login-card .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .login-card .btn-primary {
-            width: 100%;
-            padding: 0.7rem;
-            font-size: 0.95rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 0.5rem;
-        }
-        .login-error {
-            background: #d6303120;
-            color: var(--urgent);
-            border: 1px solid #d6303140;
-            border-radius: 8px;
-            padding: 0.6rem 0.8rem;
-            font-size: 0.85rem;
-            margin-bottom: 1.2rem;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-page">
-        <div class="login-card">
-            <h1>ToDoList</h1>
-            <p class="login-subtitle">Connectez-vous à votre compte</p>
+{% extends "registration/base_auth.html" %}
 
-            {% if messages %}
-                {% for msg in messages %}
-                    <div class="login-error">{{ msg }}</div>
-                {% endfor %}
-            {% endif %}
+{% block auth_title %}Connexion - AimList{% endblock %}
 
-            <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="id_username">Nom d'utilisateur</label>
-                    <input type="text" name="username" id="id_username" class="form-input" placeholder="Votre identifiant" autofocus required>
-                </div>
-                <div class="form-group">
-                    <label for="id_password">Mot de passe</label>
-                    <input type="password" name="password" id="id_password" class="form-input" placeholder="Votre mot de passe" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Se connecter</button>
-            </form>
-            <p style="text-align:center; margin-top:1.5rem; font-size:0.85rem; color:var(--text-muted);">
-                Pas encore de compte ? <a href="{% url 'register' %}" style="color:var(--accent-light); text-decoration:none;">S'inscrire</a>
-            </p>
+{% block auth_logo %}
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+{% endblock %}
+
+{% block auth_subtitle %}Connectez-vous à votre compte{% endblock %}
+
+{% block auth_content %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="id_username">Nom d'utilisateur</label>
+            <input type="text" name="username" id="id_username" class="form-input" placeholder="Votre identifiant" autofocus required>
         </div>
-    </div>
-
-    <script src="{% static 'js/accueil.js' %}"></script>
-</body>
-</html>
+        <div class="form-group">
+            <label for="id_password">Mot de passe</label>
+            <input type="password" name="password" id="id_password" class="form-input" placeholder="Votre mot de passe" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Se connecter</button>
+    </form>
+    <div class="divider"><span>ou</span></div>
+    <p class="link-text">Pas encore de compte ? <a href="{% url 'register' %}">S'inscrire</a></p>
+{% endblock %}

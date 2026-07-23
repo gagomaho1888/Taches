@@ -20,4 +20,6 @@ urlpatterns = [
     path("groupes/<int:pk>/quitter/", views.groupe_leave, name="groupe_leave"),
     path("groupes/<int:pk>/retirer/<int:member_pk>/", views.groupe_remove_member, name="groupe_remove_member"),
     path("groupes/<int:pk>/assigner/", views.groupe_assign_task, name="groupe_assign_task"),
+    path("taches/<int:pk>/toggle-status/", views.tache_toggle_status, name="tache_toggle_status"),
+    path("categories/creer/", views.categorie_create, name="categorie_create"),
 ]

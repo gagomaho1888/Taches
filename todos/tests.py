@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from .models import Tache, Categorie, SousTache, Comment, Notification, Groupe, MembreGroupe
-from .utils import update_task_statuses
+from .utils import get_effective_status, get_effective_status_label
 
 User = get_user_model()
 
@@ -54,14 +54,14 @@ class TacheModelTest(TestCase):
             description="Faire un oeuf au plat",
             categorie=self.cat,
             priority="medium",
-            status="todo",
+            status="progress",
         )
 
     def test_tache_str(self):
         self.assertEqual(str(self.tache), "Cuisiner un oeuf")
 
     def test_tache_defaults(self):
-        self.assertEqual(self.tache.status, "todo")
+        self.assertEqual(self.tache.status, "progress")
         self.assertEqual(self.tache.priority, "medium")
         self.assertIsNone(self.tache.completed_at)
 
@@ -69,7 +69,6 @@ class TacheModelTest(TestCase):
         tache = Tache.objects.create(
             user=self.user, title="Tâche terminée", status="done"
         )
-        # completed_at is set by the view, not by the model
         self.assertIsNone(tache.completed_at)
 
     def test_tache_category_optional(self):
@@ -185,9 +184,14 @@ class AuthViewTest(TestCase):
 
     def test_logout(self):
         self.client.login(username="testuser", password="testpass123")
-        response = self.client.get("/logout/")
+        response = self.client.post("/logout/")
         self.assertEqual(response.status_code, 302)
         self.assertIn("login", response.url)
+
+    def test_logout_get_rejected(self):
+        self.client.login(username="testuser", password="testpass123")
+        response = self.client.get("/logout/")
+        self.assertEqual(response.status_code, 405)
 
     def test_register_success(self):
         response = self.client.post("/inscription/", {
@@ -223,7 +227,7 @@ class AuthenticatedViewTest(TestCase):
         response = self.client.post("/taches/creer/", {
             "title": "Nouvelle tâche",
             "priority": "medium",
-            "status": "todo",
+            "status": "progress",
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Tache.objects.filter(title="Nouvelle tâche").exists())
@@ -302,131 +306,86 @@ class PaginationTest(TestCase):
         self.assertEqual(len(response.context["taches"]), 8)
 
 
-class UpdateTaskStatusesTest(TestCase):
+class EffectiveStatusTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             username="testuser", password="testpass123", email="test@test.com"
         )
 
-    def test_future_deadline_sets_todo(self):
+    def test_progress_with_future_deadline(self):
         tache = Tache.objects.create(
             user=self.user, title="Future",
             deadline=timezone.now() + timedelta(days=5),
             status="progress",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "todo")
+        self.assertEqual(get_effective_status(tache), "progress")
 
-    def test_future_hour_today_sets_todo(self):
-        tache = Tache.objects.create(
-            user=self.user, title="Plus tard aujourd'hui",
-            deadline=timezone.now() + timedelta(hours=6),
-            status="progress",
-        )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "todo")
-
-    def test_today_deadline_sets_progress(self):
-        tache = Tache.objects.create(
-            user=self.user, title="Aujourd'hui",
-            deadline=timezone.now(),
-            status="todo",
-        )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "progress")
-
-    def test_past_deadline_sets_done(self):
+    def test_progress_with_past_deadline_is_overdue(self):
         tache = Tache.objects.create(
             user=self.user, title="Passée",
             deadline=timezone.now() - timedelta(days=3),
-            status="todo",
+            status="progress",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "done")
-        self.assertIsNotNone(tache.completed_at)
+        self.assertEqual(get_effective_status(tache), "overdue")
 
-    def test_no_deadline_not_changed(self):
+    def test_done_status_ignores_deadline(self):
         tache = Tache.objects.create(
-            user=self.user, title="Pas de deadline", status="progress"
+            user=self.user, title="Fait",
+            deadline=timezone.now() - timedelta(days=1),
+            status="done",
+            completed_at=timezone.now(),
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "progress")
+        self.assertEqual(get_effective_status(tache), "done")
 
-    def test_cancelled_not_changed(self):
+    def test_cancelled_status_ignores_deadline(self):
         tache = Tache.objects.create(
             user=self.user, title="Annulée",
             deadline=timezone.now() - timedelta(days=1),
             status="cancelled",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "cancelled")
+        self.assertEqual(get_effective_status(tache), "cancelled")
 
-    def test_other_user_not_affected(self):
-        other = User.objects.create_user(
-            username="other", password="pass123", email="o@t.com"
-        )
+    def test_no_deadline_not_overdue(self):
         tache = Tache.objects.create(
-            user=other, title="Autre",
+            user=self.user, title="Pas de deadline", status="progress"
+        )
+        self.assertEqual(get_effective_status(tache), "progress")
+
+    def test_toggle_done_then_progress(self):
+        tache = Tache.objects.create(
+            user=self.user, title="Toggle",
             deadline=timezone.now() - timedelta(days=1),
-            status="todo",
+            status="progress",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "todo")
+        self.assertEqual(get_effective_status(tache), "overdue")
+        tache.status = "done"
+        tache.save()
+        self.assertEqual(get_effective_status(tache), "done")
+        tache.status = "progress"
+        tache.save()
+        self.assertEqual(get_effective_status(tache), "overdue")
 
-    def test_manual_done_not_overridden(self):
+    def test_progress_with_future_hour_today(self):
         tache = Tache.objects.create(
-            user=self.user, title="Fait manuellement",
-            deadline=timezone.now() + timedelta(days=5),
-            status="done",
-            completed_at=timezone.now(),
+            user=self.user, title="Plus tard aujourd'hui",
+            deadline=timezone.now() + timedelta(hours=6),
+            status="progress",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "done")
+        self.assertEqual(get_effective_status(tache), "progress")
 
-
-class IsOverdueTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user(
-            username="testuser", password="testpass123", email="test@test.com"
-        )
-
-    def test_urgent_past_deadline_is_done(self):
+    def test_effective_status_label(self):
         tache = Tache.objects.create(
-            user=self.user, title="Urgente passée",
-            priority="urgent",
+            user=self.user, title="Label test", status="progress"
+        )
+        self.assertIsNotNone(get_effective_status_label(tache))
+
+    def test_overdue_label(self):
+        tache = Tache.objects.create(
+            user=self.user, title="Overdue label",
             deadline=timezone.now() - timedelta(days=1),
+            status="progress",
         )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "progress")
-
-    def test_urgent_future_deadline_is_todo(self):
-        tache = Tache.objects.create(
-            user=self.user, title="Urgente future",
-            priority="urgent",
-            deadline=timezone.now() + timedelta(days=1),
-        )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "todo")
-
-    def test_high_past_deadline_is_done(self):
-        tache = Tache.objects.create(
-            user=self.user, title="Haute passée",
-            priority="high",
-            deadline=timezone.now() - timedelta(days=1),
-        )
-        update_task_statuses(self.user)
-        tache.refresh_from_db()
-        self.assertEqual(tache.status, "done")
+        self.assertEqual(get_effective_status(tache), "overdue")
 
 
 class GroupeModelTest(TestCase):
@@ -442,7 +401,7 @@ class GroupeModelTest(TestCase):
         self.assertEqual(str(self.groupe), "Dev Team")
 
     def test_groupe_code_unique(self):
-        self.assertTrue(len(self.groupe.code) == 8)
+        self.assertEqual(len(self.groupe.code), 12)
 
     def test_membre_creation(self):
         membre = MembreGroupe.objects.create(

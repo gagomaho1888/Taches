@@ -1,10 +1,11 @@
+import re
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 import secrets
 
 
-# On suppose que la classe Category a aussi été renommée en Categorie
 class Categorie(models.Model):
     nom = models.CharField(max_length=100)
     description = models.CharField(max_length=255, blank=True, default="")
@@ -13,6 +14,10 @@ class Categorie(models.Model):
 
     def __str__(self):
         return self.nom
+
+    def clean(self):
+        if self.couleur and not re.match(r'^#[0-9A-Fa-f]{6}$', self.couleur):
+            raise ValidationError({"couleur": "La couleur doit être au format hexadécimal (#RRGGBB)."})
 
 
 class Groupe(models.Model):
@@ -23,7 +28,7 @@ class Groupe(models.Model):
         on_delete=models.CASCADE,
         related_name="groupes_diriges"
     )
-    code = models.CharField(max_length=8, unique=True, default="")
+    code = models.CharField(max_length=12, unique=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -35,12 +40,8 @@ class Groupe(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = secrets.token_hex(4).upper()
+            self.code = secrets.token_hex(6).upper()
         super().save(*args, **kwargs)
-
-    @property
-    def membres_count(self):
-        return self.membres.count()
 
 
 class MembreGroupe(models.Model):
@@ -85,11 +86,11 @@ class Tache(models.Model):
     )
 
     STATUS = (
-        ("todo", "À faire"),
+        ("progress", "En cours"),
         ("done", "Terminé"),
+        ("cancelled", "Annulée"),
     )
 
-    # Associe la tâche à un utilisateur
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -111,7 +112,6 @@ class Tache(models.Model):
         null=True
     )
 
-    # Clé étrangère modifiée pour pointer vers la classe "Categorie"
     categorie = models.ForeignKey(
         Categorie,
         on_delete=models.SET_NULL,
@@ -128,7 +128,7 @@ class Tache(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS,
-        default="todo"
+        default="progress"
     )
 
     start_date = models.DateTimeField(
@@ -157,6 +157,26 @@ class Tache(models.Model):
     def __str__(self):
         return self.title
 
+    @property
+    def effective_status(self):
+        if self.status == "done":
+            return "done"
+        if self.status == "cancelled":
+            return "cancelled"
+        if self.deadline and self.deadline < timezone.now():
+            return "overdue"
+        return "progress"
+
+    @property
+    def effective_status_display(self):
+        labels = {
+            "progress": "En cours",
+            "done": "Terminé",
+            "cancelled": "Annulée",
+            "overdue": "En retard",
+        }
+        return labels.get(self.effective_status, self.effective_status)
+
 
 class SousTache(models.Model):
 
@@ -174,28 +194,6 @@ class SousTache(models.Model):
 
     def __str__(self):
         return self.title
-
-
-class Tag(models.Model):
-    name = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.name
-
-
-class TaskTag(models.Model):
-    tache = models.ForeignKey(
-        'Tache',
-        on_delete=models.CASCADE
-    )
-
-    tag = models.ForeignKey(
-        Tag,
-        on_delete=models.CASCADE
-    )
-
-    def __str__(self):
-        return f"{self.tache} - {self.tag}"
 
 
 class Comment(models.Model):
@@ -239,56 +237,6 @@ class Attachment(models.Model):
 
     def __str__(self):
         return f"Attachment for {self.tache}"
-
-
-class TaskHistory(models.Model):
-
-    tache = models.ForeignKey(
-        'Tache',
-        on_delete=models.CASCADE,
-        related_name="history"
-    )
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
-
-    action = models.CharField(
-        max_length=200
-    )
-
-    created_at = models.DateTimeField(
-        auto_now_add=True
-    )
-
-    def __str__(self):
-        return f"{self.action} by {self.user}"
-
-
-class TaskShare(models.Model):
-
-    tache = models.ForeignKey(
-        'Tache',
-        on_delete=models.CASCADE,
-        related_name="shares"
-    )
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE
-    )
-
-    permission = models.CharField(
-        max_length=20,
-        choices=[
-            ("view", "Voir"),
-            ("edit", "Modifier")
-        ]
-    )
-
-    def __str__(self):
-        return f"{self.user} - {self.permission} on {self.tache}"
 
 
 class Notification(models.Model):

@@ -13,6 +13,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='tache',
             name='status',
-            field=models.CharField(choices=[('todo', 'À faire'), ('done', 'Terminé')], default='todo', max_length=20),
+            field=models.CharField(
+                choices=[('progress', 'En cours'), ('done', 'Terminé'), ('cancelled', 'Annulée')],
+                default='progress',
+                max_length=20,
+            ),
         ),
     ]

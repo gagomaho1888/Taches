@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-header">
+        <a href="{% url 'tache_create' %}" class="back-link">&larr; Retour</a>
+        <h2>Nouvelle catégorie</h2>
+    </div>
+
+    <form method="post" class="task-form">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="id_nom">Nom *</label>
+            {{ form.nom }}
+            {% if form.nom.errors %}
+                <span class="form-error">{{ form.nom.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_description">Description</label>
+            {{ form.description }}
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'tache_create' %}" class="btn btn-cancel">Annuler</a>
+            <button type="submit" class="btn btn-primary">Créer</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

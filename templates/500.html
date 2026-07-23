@@ -1,0 +1,20 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur serveur - AimList</title>
+    <link rel="stylesheet" href="{% static 'css/accueil.css' %}">
+</head>
+<body>
+    <main class="container" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+        <div class="detail-card" style="text-align:center; padding:3rem 2rem; max-width:500px;">
+            <h1 style="font-size:4rem; margin-bottom:0.5rem; color:var(--urgent);">500</h1>
+            <h2>Erreur serveur</h2>
+            <p class="empty-state" style="margin:1rem 0 2rem;">Une erreur interne s'est produite. Veuillez réessayer plus tard.</p>
+            <a href="/login/" class="btn btn-primary">Retour à la connexion</a>
+        </div>
+    </main>
+</body>
+</html>
