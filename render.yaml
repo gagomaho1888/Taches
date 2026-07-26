@@ -4,12 +4,13 @@ services:
     runtime: python
     buildCommand: bash build.sh
     startCommand: gunicorn to_do_list.wsgi:application
+    preStartCommand: python manage.py migrate --noinput
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DJANGO_DEBUG
         value: "False"
       - key: DJANGO_ALLOWED_HOSTS
-        sync: false
+        value: "aimlist.onrender.com"
       - key: PYTHONDONTWRITEBYTECODE
         value: "1"
